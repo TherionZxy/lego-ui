@@ -7,25 +7,18 @@
       <el-select v-model="listQuery.sort" style="width: 140px" class="filter-item" @change="handleFilter">
         <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button style="margin-left: 10px;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
-      <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
+
+      <el-button style="margin-left: 10px;" v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="handleDownload">
+        按条件导出
+      </el-button>
+
+      <el-button v-waves class="filter-item" style="margin-left: 10px;float: right;" type="primary" icon="el-icon-edit" @click="handleCreate">
         新增用户
       </el-button>
     </div>
-
-    <br />
-
-    <div style="text-align: center;">
-      <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="handleDownload">
-        按条件导出
-      </el-button>
-      <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="handleDownload">
-        导出所有数据
-      </el-button>
-    </div>
-
     <br />
 
     <!-- 数据列表模块 -->
@@ -64,7 +57,7 @@
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             修改
           </el-button>
-          <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row)">
+          <el-button :disabled="row.username == name" v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row)">
             删除
           </el-button>
         </template>
@@ -74,18 +67,18 @@
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
 
     <!-- 新增/修改对话框 -->
-    <el-dialog :title="textMap[dialogStatus]" width="30%" :visible.sync="dialogFormVisible">
-      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="30%" style="width: 100%; margin-left:50px;">
+    <el-dialog :title="textMap[dialogStatus]" width="400px" :visible.sync="dialogFormVisible">
+      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 100%; margin-left:50px;">
         <el-form-item label="用户名" prop="username" style="text-align: left;">
-          <el-input :disabled="lock" style="width: 70%;" v-model="temp.username" />
+          <el-input :disabled="lock" style="width: 200px;" v-model="temp.username" />
         </el-form-item>
         <el-form-item label="密码" prop="password" style="text-align: left;">
-          <el-input style="width: 70%;" :type="pwdType" v-model="temp.password" >
+          <el-input style="width: 200px;" :type="pwdType" v-model="temp.password" >
             <i style="transform: scale(1.5) translateX(-10px);" slot="suffix" class="el-icon-view" @click="showPwd()"></i>
           </el-input>
         </el-form-item>
         <el-form-item label="手机号" prop="phone" style="text-align: left;">
-          <el-input style="width: 70%;" v-model="temp.phone" />
+          <el-input style="width: 200px;" v-model="temp.phone" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -99,7 +92,7 @@
     </el-dialog>
 
     <!-- 删除对话框 -->
-    <el-dialog :title="'删除用户'" width="20%" :visible.sync="deleteDialogVisible">
+    <el-dialog :title="'删除用户'" min-width="<300px></300px>" width="300px" :visible.sync="deleteDialogVisible">
       <span style="font-size: 16px;">确认删除用户 "{{ temp.username }}" ?</span>
       <div slot="footer" class="dialog-footer">
         <el-button @click="deleteDialogVisible = false">
@@ -115,16 +108,24 @@
 
 <script>
 // 导入所需的api
-import { fetchList, createAdmin, updateAdmin } from '@/api/user-api'
+import { mapGetters } from 'vuex'
+import { fetchList, fetchListToExport, createAdmin, updateAdmin, deleteAdmin } from '@/api/user-api'
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
-import {validPhoneNumber} from '@/utils/validate.js'
+import { validPhoneNumber } from '@/utils/validate.js'
+import { parseTime } from '@/utils/index'
 
 export default {
   name: 'UserTable',
+  computed: {
+    ...mapGetters([
+      'name'
+    ])
+  },
   components: { Pagination },
   directives: { waves },
   filters: {
+    parseTime
   },
   data() {
     return {
@@ -197,6 +198,11 @@ export default {
         this.total = response.data.total
       })
     },
+    getListToExport(callback) {
+      fetchListToExport(this.listQuery).then(response => {
+         callback(response.data)
+      })
+    },
     handleFilter() {
       // 搜索时默认返回第一页
       this.listQuery.page = 1
@@ -263,7 +269,7 @@ export default {
     // 点击修改数据时调用
     handleUpdate(row) {
       this.lock = true
-      this.temp = Object.assign({}, row) // copy obj
+      this.temp = Object.assign({}, row)
       this.dialogStatus = 'update'
       this.dialogFormVisible = true
       this.$nextTick(() => {
@@ -276,7 +282,7 @@ export default {
         if (valid) {
           const tempData = Object.assign({}, this.temp)
           tempData.timestamp = +new Date(tempData.timestamp)
-          updateAdmin(tempData).then(() => {
+          updateAdmin(tempData).then((res) => {
             const index = this.list.findIndex(v => v.id === this.temp.id)
             this.list.splice(index, 1, this.temp)
             this.dialogFormVisible = false
@@ -297,34 +303,45 @@ export default {
     },
     // 点击确认删除后调用
     deleteData() {
-      const index = this.list.findIndex(v => v.id === this.temp.id)
-      this.list.splice(index, 1)
-      this.$notify({
-        title: '成功',
-        message: '删除用户成功',
-        type: 'success',
-        duration: 2000
+      let id = this.temp.id
+      deleteAdmin({ id }).then(() => {
+        const index = this.list.findIndex(v => v.id === this.temp.id)
+        this.list.splice(index, 1)
+        this.deleteDialogVisible = false
+        this.$notify({
+          title: '成功',
+          message: '删除用户成功',
+          type: 'success',
+          duration: 2000
+        })
       })
-      this.deleteDialogVisible = false
     },
     // 导出表格为Excel
     handleDownload() {
-      this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['用户名', '密码', '手机号']
-        const filterVal = ['username', 'password', 'phone']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'user-list'
+      // 首先调用getListToExport方法
+      this.getListToExport((res) => {
+        this.downloadLoading = true
+        import('@/vendor/Export2Excel').then(excel => {
+          const tHeader = ['用户名', '密码', '手机号']
+          const filterVal = ['adminName', 'adminPwd', 'adminPhone']
+          const data = this.formatJsonToExport(filterVal, res)
+          excel.export_json_to_excel({
+            header: tHeader,
+            data,
+            filename: 'user-list-' + parseTime(new Date(), '{y}-{m}-{d}') 
+          })
+          this.downloadLoading = false
         })
-        this.downloadLoading = false
       })
     },
     // 针对不同的属性进行属性值过滤
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {
+        return v[j]
+      }))
+    },
+    formatJsonToExport(filterVal, data) {
+      return data.map(v => filterVal.map(j => {
         return v[j]
       }))
     },

@@ -109,11 +109,14 @@ export default {
       this.$refs.loginForm.validate(valid => {
         if (valid) {
           this.loading = true
-          this.$store.dispatch('user/login', this.loginForm).then((e) => {
-            console.log(e)
+          this.$store.dispatch('user/login', this.loginForm).then(() => {
+            if (this.redirect.split('/')[1] == 'useradmin') {
+              this.redirect = '/'
+            }
             this.$router.push({ path: this.redirect || '/' })
             this.loading = false
-          }).catch(() => {
+          }).catch((e) => {
+            console.log(e)
             this.loading = false
           })
         } else {

@@ -6,7 +6,7 @@
       <el-select v-model="listQuery.status" style="width: 15%;" class="filter-item" @change="handleFilter">
         <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button style="width: 10%;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button style="width: 10%;margin-left: 10px; " v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
       <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
@@ -71,7 +71,7 @@
       </el-table-column>
       <el-table-column label="是否开始" min-width="10%" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.status==0?'未开始':'已开始' }}</span>
+          <span>{{ row.status==1?'已开始':'未开始' }}</span>
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" min-width="15%" class-name="small-padding fixed-width">
@@ -89,17 +89,17 @@
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
 
     <!-- 修改对话框 -->
-    <el-dialog :title="'修改抢购信息'" width="30%" :visible.sync="updateDialogVisible">
+    <el-dialog :title="'修改抢购信息'" width="400px" :visible.sync="updateDialogVisible">
       <el-form ref="dataForm" :model="temp" :rules="rules" size="medium" label-width="100px">
         <el-form-item label="惊爆价" prop="discount">
-          <el-input-number v-model="temp.discount" placeholder="惊爆价" :precision='2'></el-input-number>
+          <el-input-number v-model="temp.discount" :max="temp.price" placeholder="惊爆价" :precision='2'></el-input-number>
         </el-form-item>
         <el-form-item label="限购数量" prop="maxnum">
           <el-input-number v-model="temp.maxnum" placeholder="限购数量"></el-input-number>
         </el-form-item>
         <el-form-item label="活动日期" prop="date">
           <el-date-picker v-model="temp.date" format="yyyy-MM-dd" value-format="yyyy-MM-dd"
-            :style="{width: '100%'}" placeholder="请选择活动日期" clearable>
+            :style="{width: '100%'}" placeholder="请选择活动日期" clearable :picker-options="pickerOptions">
           </el-date-picker>
         </el-form-item>
         <el-form-item label="时间范围" prop="time">
@@ -119,14 +119,26 @@
       </div>
     </el-dialog>
 
+    <!-- 删除对话框 -->
+    <el-dialog :title="'是否强制停止促销活动?'" width="20%" :visible.sync="deleteDialogVisible">
+      <span style="font-size: 16px;">确认停止 "{{ temp.fruitname }} 的限时抢购" ?</span>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="deleteDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="deleteData()">
+          确认
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 // 导入所需的api
-import { fetchList } from '@/api/flashsale'
-import waves from '@/directive/waves' // waves directive
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import { fetchList, fetchListToExport, updateFlashSale, stopFlashSale } from '@/api/flashsale-api'
+import waves from '@/directive/waves'
+import Pagination from '@/components/Pagination'
 import { parseTime } from '@/utils/index'
 
 export default {
@@ -150,14 +162,14 @@ export default {
         page: 1,
         limit: 20,
         fruitname: '',
-        status: 'all'
+        status: -1
       },
       // 下载进度条
       downloadLoading: false,
-
       updateDialogVisible: false,
       temp: {
         id: undefined,
+        price: 0.0,
         discount: 0.0,
         maxnum: 1,
         date: '',
@@ -186,7 +198,15 @@ export default {
         }],
       },
 
-      statusOptions: [{label:'all', key: 'all'},{ label: '未开始', key: '0' }, { label: '已开始', key: '1' }],
+      deleteDialogVisible: false,
+
+      pickerOptions: {
+        disabledDate(time) {
+           return time.getTime() < Date.now() - 8.64e7;
+        },
+      },
+
+      statusOptions: [{label:'all', key: -1},{ label: '未开始', key: 0 }, { label: '已开始', key: 1 }],
     }
   },
   created() {
@@ -195,15 +215,32 @@ export default {
   methods: {
     getList() {
       fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
+        this.list = []
+        response.data.fruitList.forEach(item => {
+          let temp = {
+            id: item.fruitId,
+            fruitname: item.fruitName,
+            price: item.normPrice,
+            discount: item.discountPrice,
+            maxnum: item.maxNum,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            status: (new Date(item.startTime) < new Date() && new Date() < new Date(item.endTime))?1:0
+          }
+          this.list.push(temp)
+        })
         this.total = response.data.total
       })
     },
     handleFilter() {
-      // 搜索时默认返回第一页
       this.listQuery.page = 1
       this.getList()
     },
+
+    getStatus(startTime, endTime) {
+      console.log( )
+    },
+
     // 按条件导出数据
     downloadByCondition() {
       this.downloadLoading = true
@@ -237,9 +274,9 @@ export default {
     },
 
     handleUpdate(row) {
-      console.log(1)
       this.temp = Object.assign({}, row)
       // 这里不能直接赋值，要使用$set
+      console.log(this.temp)
       this.$set(this.temp, "date", parseTime(this.temp.startTime, '{y}-{m}-{d}'))
       this.$set(this.temp, "time", [parseTime(this.temp.startTime, '{h}:{i}'),parseTime(this.temp.endTime, '{h}:{i}')])
       this.updateDialogVisible = true
@@ -248,20 +285,52 @@ export default {
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if(valid) {
-          const index = this.list.findIndex(v => v.id === this.temp.id)
           this.temp.startTime = this.temp.date + ' ' + this.temp.time[0]
           this.temp.endTime = this.temp.date + ' ' + this.temp.time[1]
-          this.list.splice(index, 1, this.temp)
-          this.updateDialogVisible = false
-          this.$notify({
-            title: '成功',
-            message: '修改抢购信息成功',
-            type: 'success',
-            duration: 2000
+
+          updateFlashSale(this.temp).then(()=>{
+            const index = this.list.findIndex(v => v.id === this.temp.id)
+            this.list.splice(index, 1, this.temp)
+            
+            if(new Date(this.temp.startTime) <= new Date() && new Date() <= new Date(this.temp.endTime)) {
+              this.list[index].status = 1
+            } else {
+              this.list[index].status = 0
+            }
+            
+            this.updateDialogVisible = false
+            this.$notify({
+              title: '成功',
+              message: '修改抢购信息成功',
+              type: 'success',
+              duration: 2000
+            })
           })
         }
       })
     },
+
+    handleDelete(row) {
+      this.deleteDialogVisible = true
+      this.temp = Object.assign({}, row)
+    },
+
+    deleteData() {
+      let id = this.temp.id
+      stopFlashSale({ id }).then(() => {
+        const index = this.list.findIndex(v => v.id === this.temp.id)
+        this.list[index].status = 0
+        this.list[index].startTime = null
+        this.list[index].endTime = null
+        this.$notify({
+          title: '成功',
+          message: '强制停止商品限时抢购成功',
+          type: 'success',
+          duration: 2000
+        })
+        this.deleteDialogVisible = false
+      })
+    }
   }
 }
 </script>

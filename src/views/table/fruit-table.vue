@@ -6,25 +6,15 @@
       <el-select v-model="listQuery.status" style="width: 15%;" class="filter-item" @change="handleFilter">
         <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button style="width: 10%;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button style="width: 10%;margin-left: 10px;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
-      <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
+      <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
+        按条件导出
+      </el-button>
+      <el-button class="filter-item" style="margin-left: 10px;float: right;" type="primary" icon="el-icon-edit" @click="handleCreate">
         新增水果
       </el-button>
-    </div>
-
-    <br />
-
-    <div>
-      <div style="text-align: center;">
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
-          按条件导出
-        </el-button>
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadToday">
-          导出当天数据
-        </el-button>
-      </div>
     </div>
 
     <br />
@@ -107,7 +97,7 @@
 
 <script>
 // 导入所需的api
-import { fetchList, changeFruitStatus } from '@/api/fruit'
+import { fetchList, fetchListToExport, changeFruitStatus, deleteFruit } from '@/api/fruit-api'
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
 import { formatFruitStatus } from '@/utils/index'
@@ -132,7 +122,7 @@ export default {
         page: 1,
         limit: 20,
         fruitname: '',
-        status: 'all'
+        status: -1
       },
       // 下载进度条
       downloadLoading: false,
@@ -150,7 +140,7 @@ export default {
 
       alterDialogVisible: false,
 
-      statusOptions: [{label:'all', key: 'all'},{ label: '未上架', key: '0' }, { label: '已上架', key: '1' }],
+      statusOptions: [{label:'all', key: -1},{ label: '未上架', key: 0}, { label: '已上架', key: 1}],
     }
   },
   created() {
@@ -159,10 +149,30 @@ export default {
   methods: {
     getList() {
       fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
+        this.list = []
+        response.data.fruitList.forEach(item => {
+          let temp = {
+            id: item.fruitId,
+            price: item.normPrice,
+            fruitname: item.fruitName,
+            detail: item.fruitIntro,
+            password: item.adminPwd,
+            status: item.isSale,
+            picture: item.fruitPic
+          }
+          this.list.push(temp)
+        })
+
         this.total = response.data.total
       })
     },
+
+    getListToExport(callback) {
+      fetchListToExport(this.listQuery).then(response => {
+        callback(response.data)
+      })
+    },
+
     handleFilter() {
       // 搜索时默认返回第一页
       this.listQuery.page = 1
@@ -170,23 +180,20 @@ export default {
     },
     // 按条件导出数据
     downloadByCondition() {
-      this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['水果名称', '价格', '描述', '图片', '状态']
-        const filterVal = ['fruitname', 'price', 'detail', 'picture', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'fruit-list-' + new Date().toLocaleDateString()
+      this.getListToExport((res) => {
+        this.downloadLoading = true
+        import('@/vendor/Export2Excel').then(excel => {
+          const tHeader = ['水果名称', '价格', '描述', '图片', '状态']
+          const filterVal = ['fruitName', 'normPrice', 'fruitIntro', 'fruitPic', 'isSale']
+          const data = this.formatJsonToExport(filterVal, res)
+          excel.export_json_to_excel({
+            header: tHeader,
+            data,
+            filename: 'fruit-list-' + new Date().toLocaleDateString()
+          })
+          this.downloadLoading = false
         })
-        this.downloadLoading = false
       })
-    },
-
-    // 导出今日数据
-    downloadToday() {
-
     },
 
     // 针对不同的属性进行属性值过滤
@@ -200,21 +207,34 @@ export default {
       }))
     },
 
+    formatJsonToExport(filterVal, data) {
+      return data.map(v => filterVal.map(j => {
+        if(j == 'isSale'){
+          return formatFruitStatus(v[j])
+        } else {
+          return v[j]
+        }
+      }))
+    },
+
     handleDelete(row) {
       this.deleteDialogVisible = true
       this.temp = Object.assign({}, row)
     },
 
     deleteData() {
-      const index = this.list.findIndex(v => v.id === this.temp.id)
-      this.list.splice(index, 1)
-      this.$notify({
-        title: '成功',
-        message: '删除商品成功',
-        type: 'success',
-        duration: 2000
+      let id = this.temp.id
+      deleteFruit({ id }).then(() => {
+        const index = this.list.findIndex(v => v.id === this.temp.id)
+        this.list.splice(index, 1)
+        this.$notify({
+          title: '成功',
+          message: '删除商品成功',
+          type: 'success',
+          duration: 2000
+        })
+        this.deleteDialogVisible = false
       })
-      this.deleteDialogVisible = false
     },
 
     handleCreate() {
@@ -232,9 +252,10 @@ export default {
     },
 
     alterData() {
-      const tempData = Object.assign({}, this.temp)
+      const tempData = {}
       const newStatus = this.temp.status == 0?1:0
-      tempData.status = newStatus
+      tempData.fruitId = this.temp.id
+      tempData.isSale = newStatus
       changeFruitStatus(tempData).then(()=>{
         const index = this.list.findIndex(v => v.id === this.temp.id)
         this.list[index].status = newStatus

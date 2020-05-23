@@ -73,7 +73,7 @@
   </div>
 </template>
 <script>
-import { updateFruit } from '@/api/fruit'
+import { updateFruit } from '@/api/fruit-api'
 
 export default {
   components: {},

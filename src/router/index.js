@@ -19,6 +19,12 @@ export const constantRoutes = [
     hidden: true
   },
 
+  {
+    path: '/dashboard',
+    redirect: '/home',
+    hidden: true
+  },
+
   // 首页
   {
     path: '/',
@@ -52,7 +58,7 @@ export const asyncRoutes = [
       },
       {
         path: 'userop',
-        component: ()=>import('@/views/table/complex-table'),
+        component: ()=>import('@/views/table/history-table'),
         name: 'UserOp',
         meta: {title: '操作记录'}
       }

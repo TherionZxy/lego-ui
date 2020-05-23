@@ -1,14 +1,11 @@
-/**
- * Created by PanJiaChen on 16/11/18.
- */
-
-/**
- * Parse the time to string
- * @param {(Object|string|number)} time
- * @param {string} cFormat
- * @returns {string | null}
- */
 export function parseTime(time, cFormat) {
+  if (time == null) {
+    if (cFormat == null) {
+      return '未设置'
+    } else {
+      time = new Date()
+    }
+  }
   if (arguments.length === 0) {
     return null
   }
@@ -43,11 +40,6 @@ export function parseTime(time, cFormat) {
   return time_str
 }
 
-/**
- * @param {number} time
- * @param {string} option
- * @returns {string}
- */
 export function formatTime(time, option) {
   if (('' + time).length === 10) {
     time = parseInt(time) * 1000
@@ -86,10 +78,6 @@ export function formatTime(time, option) {
   }
 }
 
-/**
- * @param {string} url
- * @returns {Object}
- */
 export function param2Obj(url) {
   const search = url.split('?')[1]
   if (!search) {
@@ -119,6 +107,20 @@ export function formatFruitStatus(status) {
     return '未上架'
   } else {
     return '已上架'
+  }
+}
+
+export function formatHistoryType(type) {
+  if(type == 'user') {
+    return '用户管理'
+  } else if (type == 'order') {
+    return '订单管理'
+  } else if (type == 'fruit') {
+    return '水果上架'
+  } else if (type == 'activity') {
+    return '限时抢购'
+  } else {
+    return 'unknown'
   }
 }
 
