@@ -95,15 +95,17 @@ export function param2Obj(url) {
 }
 
 export function formatOrderStatus(status) {
-  if(status == 0) {
+  if (status == 1) {
     return '待提货'
-  } else {
+  } else if (status == 2) {
     return '已提货'
+  } else {
+    return '未知'
   }
 }
 
 export function formatFruitStatus(status) {
-  if(status == 0) {
+  if (status == 0) {
     return '未上架'
   } else {
     return '已上架'
@@ -111,7 +113,7 @@ export function formatFruitStatus(status) {
 }
 
 export function formatHistoryType(type) {
-  if(type == 'user') {
+  if (type == 'user') {
     return '用户管理'
   } else if (type == 'order') {
     return '订单管理'
@@ -119,8 +121,22 @@ export function formatHistoryType(type) {
     return '水果上架'
   } else if (type == 'activity') {
     return '限时抢购'
+  } else if (type == 'login') {
+    return '用户登录'
   } else {
     return 'unknown'
+  }
+}
+
+export function getRandomCode() {
+  return Math.floor(Math.random()*100000)
+}
+
+export function subString(detail) {
+  if(detail.length > 27) {
+    return detail.substr(0,27) + '...'
+  } else {
+    return detail
   }
 }
 
@@ -143,6 +159,8 @@ export function debounce(func, wait, immediate) {
       }
     }
   }
+
+
 
   return function(...args) {
     context = this

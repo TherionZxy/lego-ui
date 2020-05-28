@@ -8,7 +8,7 @@
       <el-dropdown class="avatar-container" trigger="click">
         <div class="avatar-wrapper">
           <!-- <img :src="avatar+'?imageView2/1/w/80/h/80'" class="user-avatar"> -->
-          <canvas id="canvas" width="40px" height="40px"></canvas>
+          <canvas id="canvas" width="40px" height="40px" />
           <i class="el-icon-caret-bottom" />
         </div>
         <el-dropdown-menu slot="dropdown" class="user-dropdown">
@@ -27,71 +27,71 @@
 </template>
 
 <script>
-  import {
-    mapGetters
-  } from 'vuex'
-  import Breadcrumb from '@/components/Breadcrumb'
-  import Hamburger from '@/components/Hamburger'
+import {
+  mapGetters
+} from 'vuex'
+import Breadcrumb from '@/components/Breadcrumb'
+import Hamburger from '@/components/Hamburger'
 
-  export default {
-    components: {
-      Breadcrumb,
-      Hamburger
+export default {
+  components: {
+    Breadcrumb,
+    Hamburger
+  },
+  computed: {
+    ...mapGetters([
+      'sidebar',
+      'name'
+    ])
+  },
+  mounted() {
+    this.textToImage(this.name)
+  },
+  methods: {
+    toggleSideBar() {
+      this.$store.dispatch('app/toggleSideBar')
     },
-    computed: {
-      ...mapGetters([
-        'sidebar',
-        'name'
-      ])
+    async logout() {
+      await this.$store.dispatch('user/logout')
+      this.$router.push(`/login?redirect=${this.$route.fullPath}`)
     },
-    mounted() {
-      this.textToImage(this.name)
-    },
-    methods: {
-      toggleSideBar() {
-        this.$store.dispatch('app/toggleSideBar')
-      },
-      async logout() {
-        await this.$store.dispatch('user/logout')
-        this.$router.push(`/login?redirect=${this.$route.fullPath}`)
-      },
-      textToImage(name) {
-        //设置初始值,防止name为空时程序无法执行
-        var nick = "未知";
-        var color = "#2D89EF"
-        //判断name是否为空
-        if (name) {
-          nick = name.charAt(0);
-          var str = ''
-          for (var i = 0; i < name.length; i++) {
-            str += parseInt(name[i].charCodeAt(0), 10).toString(16)
-          }
-          color = '#' + str.slice(1, 4)
+    textToImage(name) {
+      // 设置初始值,防止name为空时程序无法执行
+      var nick = '未知'
+      var color = '#2D89EF'
+      // 判断name是否为空
+      if (name) {
+        nick = name.charAt(0)
+        var str = ''
+        for (var i = 0; i < name.length; i++) {
+          str += parseInt(name[i].charCodeAt(0), 10).toString(16)
         }
-        var fontSize = 20;
-        var fontWeight = 'normal';
-
-        var canvas = document.getElementById('canvas');
-        // 设置canvas宽高
-        canvas.width = 40;
-        canvas.height = 40;
-        var context = canvas.getContext('2d');
-        //头像背景颜色设置
-        context.beginPath();
-        context.arc(20,20,20,0,Math.PI*2,true);
-        context.fillStyle = color;
-        context.closePath();
-        context.fill();
-        //头像字体颜色设置
-        context.fillStyle = '#FFFFFF';
-        context.font = fontWeight + ' ' + fontSize + 'px sans-serif';
-        context.textAlign = 'center';
-        context.textBaseline = "middle";
-        context.fillText(nick, fontSize, fontSize);
-        return canvas.toDataURL("image/png");
+        color = '#' + str.slice(1, 4)
       }
+      var fontSize = 20
+      var fontWeight = 'normal'
+
+      var canvas = document.getElementById('canvas')
+      // 设置canvas宽高
+      canvas.width = 40
+      canvas.height = 40
+      var context = canvas.getContext('2d')
+      // 头像背景颜色设置
+      context.beginPath()
+      context.arc(20, 20, 20, 0, Math.PI * 2, true)
+      context.fillStyle = color
+      context.closePath()
+      context.fill()
+      // 头像字体颜色设置
+      context.fillStyle = '#FFFFFF'
+      context.font = fontWeight + ' ' + fontSize + 'px sans-serif'
+      context.textAlign = 'center'
+      context.textBaseline = 'middle'
+      context.fillText(nick, fontSize, fontSize)
+      return canvas.toDataURL('image/png')
     }
   }
+}
 </script>
 
 <style lang="scss" scoped>

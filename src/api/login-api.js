@@ -4,7 +4,7 @@ import qs from 'qs'
 // 登录api
 export function login(data) {
   return request({
-    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     url: '/api/admin/login',
     method: 'post',
     data: qs.stringify(data)

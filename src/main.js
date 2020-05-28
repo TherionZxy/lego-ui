@@ -12,13 +12,10 @@ import App from './App'
 import store from './store'
 import router from './router'
 
-import '@/icons' 
-import '@/permission' 
+// import * as qiniu from 'qiniu-js'
 
-if (process.env.NODE_ENV === 'production') {
-  const { mockXHR } = require('../mock')
-  mockXHR()
-}
+import '@/icons'
+import '@/permission'
 
 Vue.use(ElementUI)
 

@@ -4,26 +4,16 @@
       <!-- 页面上半部分的查询、导出数据模块 -->
       <el-input v-model="listQuery.fruitname" placeholder="水果名" style="width: 20%;" class="filter-item" @keyup.enter.native="handleFilter" />
       <!-- 时间选择 -->
-      <el-date-picker style="width: 20%;" v-model="listQuery.time" type="date" placeholder="选择日期"></el-date-picker>
-      <el-button style="width: 10%;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-date-picker v-model="listQuery.time" style="width: 20%;" type="date" placeholder="选择日期" @change="handleFilter" />
+      <el-button v-waves style="width: 10%;margin-left: 10px;" class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
+      </el-button>
+      <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
+        按条件导出
       </el-button>
     </div>
 
-    <br />
-
-    <div>
-      <div style="text-align: center;">
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
-          按条件导出
-        </el-button>
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadToday">
-          导出当天数据
-        </el-button>
-      </div>
-    </div>
-
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -40,7 +30,7 @@
           <span>{{ row.fruitname }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="日销售量" min-width="20%">
+      <el-table-column label="日销售量" min-width="20%" align="center">
         <template slot-scope="{row}">
           <span>{{ row.number }}</span>
         </template>
@@ -54,15 +44,17 @@
 
 <script>
 // 导入所需的api
-import { fetchTotalList } from '@/api/order'
-import waves from '@/directive/waves' // waves directive
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import { fetchTotalList, fetchTotalListToExport } from '@/api/total-api'
+import waves from '@/directive/waves'
+import Pagination from '@/components/Pagination'
+import { parseTime } from '@/utils'
 
 export default {
   name: 'TotalOrderTable',
   components: { Pagination },
   directives: { waves },
   filters: {
+    parseTime
   },
   data() {
     return {
@@ -78,7 +70,7 @@ export default {
         page: 1,
         limit: 20,
         fruitname: '',
-        time: ''
+        time: parseTime(new Date(),'{y}-{m}-{d}')
       },
       // 下载进度条
       downloadLoading: false
@@ -90,39 +82,55 @@ export default {
   methods: {
     getList() {
       fetchTotalList(this.listQuery).then(response => {
-        this.list = response.data.items
+        this.list = []
+        response.data.totalList.forEach(item => {
+          let temp = {
+            fruitname: item.name,
+            number: item.number
+          }
+          this.list.push(temp)
+        })
         this.total = response.data.total
       })
     },
+    getListToExport(callback) {
+      fetchTotalListToExport(this.listQuery).then(response => {
+        callback(response.data)
+      })
+    },
     handleFilter() {
-      // 搜索时默认返回第一页
       this.listQuery.page = 1
       this.getList()
     },
     // 按条件导出数据
     downloadByCondition() {
-      this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['水果名称', '日销售量']
-        const filterVal = ['fruitname', 'number']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'total-list-' + new Date().toLocaleDateString()
+      this.getListToExport((res) => {
+        this.downloadLoading = true
+        import('@/vendor/Export2Excel').then(excel => {
+          const tHeader = ['水果名称', '日销售量']
+          const filterVal = ['name', 'number']
+          const data = this.formatJsonToExport(filterVal, res)
+          excel.export_json_to_excel({
+            header: tHeader,
+            data,
+            filename: 'total-list-' + parseTime(this.listQuery.time, '{y}-{m}-{d}')
+          })
+          this.downloadLoading = false
+        }).catch((e)=>{
+          console.log(e)
         })
-        this.downloadLoading = false
       })
-    },
-
-    // 导出今日数据
-    downloadToday() {
-
     },
 
     // 针对不同的属性进行属性值过滤
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {
+        return v[j]
+      }))
+    },
+
+    formatJsonToExport(filterVal, data) {
+      return data.map(v => filterVal.map(j => {
         return v[j]
       }))
     }

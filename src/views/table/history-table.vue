@@ -3,11 +3,11 @@
     <div class="filter-container">
       <!-- 页面上半部分的查询、导出数据模块 -->
       <el-input v-model="listQuery.username" placeholder="管理员" style="width: 200px;" class="filter-item" @keyup.enter.native="handleFilter" />
-      <el-button style="margin-left: 10px;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button v-waves style="margin-left: 10px;" class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
     </div>
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -19,17 +19,12 @@
       highlight-current-row
       style="width: 100%;"
     >
-      <el-table-column label="ID" prop="id" sortable="custom" align="center" width="80" >
-        <template slot-scope="{row}">
-          <span>{{ row.id }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="管理员" width="200px" align="center">
+      <el-table-column label="管理员" width="100px" align="center">
         <template slot-scope="{row}">
           <span>{{ row.username }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作类型" min-width="200px" align="center">
+      <el-table-column label="操作类型" min-width="100px" align="center">
         <template slot-scope="{row}">
           <span>{{ row.type | formatHistoryType }}</span>
         </template>
@@ -39,7 +34,7 @@
           <span>{{ row.operation }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作时间" min-width="200px" align="center">
+      <el-table-column label="操作时间" min-width="100px" align="center">
         <template slot-scope="{row}">
           <span>{{ row.time | parseTime }}</span>
         </template>
@@ -91,7 +86,7 @@ export default {
       fetchList(this.listQuery).then(response => {
         this.list = []
         response.data.historyList.forEach(item => {
-          let temp = {
+          const temp = {
             id: item.historyId,
             username: item.adminName,
             operation: item.operation,
@@ -101,6 +96,8 @@ export default {
           this.list.push(temp)
         })
         this.total = response.data.total
+      }).catch((e) => {
+        console.log(e)
       })
     },
     handleFilter() {

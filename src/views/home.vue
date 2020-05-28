@@ -3,7 +3,7 @@
     <div class="dashboard-text" style="position: absolute; z-index: 1;">欢迎您: {{ name }}</div>
     <chart style="z-index: 0;" height="100%" width="100%" />
 
-    <clock style="z-index:2;position: absolute;right: 10px;top: 10px; border: 5px solid white;color: white;" size="200px"></clock>
+    <clock style="z-index:2;position: absolute;right: 10px;top: 10px; border: 5px solid white;color: white;" size="200px" />
   </div>
 </template>
 
@@ -19,8 +19,8 @@ export default {
       'name'
     ])
   },
-  components:{
-    Clock,Chart
+  components: {
+    Clock, Chart
   }
 }
 </script>

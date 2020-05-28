@@ -29,24 +29,14 @@ module.exports = {
   lintOnSave: process.env.NODE_ENV === 'development',
   // 如果你不需要生产环境的 source map，可以将其设置为 false 以加速生产环境构建。
   productionSourceMap: false,
-  //webpack-dev-server 相关配置
-  // devServer: {
-  //   port: port,
-  //   open: true,
-  //   overlay: {
-  //     warnings: false,
-  //     errors: true
-  //   },
-  //   before: require('./mock/mock-server.js')
-  // },
+
   devServer: {
     host: '0.0.0.0',
     port: port,
     open: true,
     proxy: {
-      // detail: https://cli.vuejs.org/config/#devserver-proxy
       [process.env.VUE_APP_BASE_API]: {
-        target: `http://localhost:8080/lego`,
+        target: `http://127.0.0.1:8080/lego`,
         changeOrigin: true,
         pathRewrite: {
           ['^' + process.env.VUE_APP_BASE_API]: ''

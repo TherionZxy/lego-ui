@@ -34,10 +34,10 @@ export const constantRoutes = [
       {
         path: 'home',
         component: () => import('@/views/home'),
-        meta: {title: '首页', icon: 'dashboard'}
+        meta: { title: '首页', icon: 'dashboard' }
       }
     ]
-  },
+  }
 
 ]
 
@@ -48,19 +48,19 @@ export const asyncRoutes = [
     component: Layout,
     redirect: '/useradmin/userlist',
     name: 'UserAdmin',
-    meta: {title: '用户管理', icon: 'user', roles: ['SUPERADMIN']},
+    meta: { title: '用户管理', icon: 'user', roles: ['SUPERADMIN'] },
     children: [
       {
         path: 'userlist',
-        component: ()=>import('@/views/table/user-table'),
+        component: () => import('@/views/table/user-table'),
         name: 'UserList',
-        meta: {title: '用户列表'}
+        meta: { title: '用户列表' }
       },
       {
         path: 'userop',
-        component: ()=>import('@/views/table/history-table'),
+        component: () => import('@/views/table/history-table'),
         name: 'UserOp',
-        meta: {title: '操作记录'}
+        meta: { title: '操作记录' }
       }
     ]
   },
@@ -70,19 +70,19 @@ export const asyncRoutes = [
     component: Layout,
     name: 'OrderAdmin',
     redirect: '/orderadmin/orderlist',
-    meta: {title: '订单管理', icon: 'table', roles:['ADMIN']},
+    meta: { title: '订单管理', icon: 'table', roles: ['ADMIN'] },
     children: [
       {
         path: 'orderlist',
-        component: ()=>import('@/views/table/order-table'),
+        component: () => import('@/views/table/order-table'),
         name: 'OrderList',
-        meta: {title: '订单列表'}
+        meta: { title: '订单列表' }
       },
       {
         path: 'ordertotal',
-        component: ()=>import('@/views/table/total-table'),
+        component: () => import('@/views/table/total-table'),
         name: 'OrderTotal',
-        meta: {title: '订单汇总'}
+        meta: { title: '订单汇总' }
       }
     ]
   },
@@ -95,15 +95,15 @@ export const asyncRoutes = [
     children: [
       {
         path: 'fruitlist',
-        component: ()=>import('@/views/table/fruit-table'),
+        component: () => import('@/views/table/fruit-table'),
         name: 'FruitList',
-        meta: {title: '每日上新', icon: 'guide' ,roles: ['ADMIN']}
+        meta: { title: '每日上新', icon: 'guide', roles: ['ADMIN'] }
       },
       {
         path: 'modify',
-        component: ()=>import('@/views/form/fruit-form'),
+        component: () => import('@/views/form/fruit-form'),
         name: 'Modify',
-        meta: {title: '商品编辑'},
+        meta: { title: '商品编辑' },
         hidden: true
       }
     ]
@@ -116,9 +116,9 @@ export const asyncRoutes = [
     children: [
       {
         path: 'salelist',
-        component: ()=>import('@/views/table/flashsale-table'),
+        component: () => import('@/views/table/flashsale-table'),
         name: 'SaleList',
-        meta: {title: '限时抢购', icon: 'money', roles: ['ADMIN']}
+        meta: { title: '限时抢购', icon: 'money', roles: ['ADMIN'] }
       }
     ]
   },

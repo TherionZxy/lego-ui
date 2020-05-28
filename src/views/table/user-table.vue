@@ -7,11 +7,11 @@
       <el-select v-model="listQuery.sort" style="width: 140px" class="filter-item" @change="handleFilter">
         <el-option v-for="item in sortOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button style="margin-left: 10px;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button v-waves style="margin-left: 10px;" class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
 
-      <el-button style="margin-left: 10px;" v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="handleDownload">
+      <el-button v-waves style="margin-left: 10px;" :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="handleDownload">
         按条件导出
       </el-button>
 
@@ -19,7 +19,7 @@
         新增用户
       </el-button>
     </div>
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -57,7 +57,7 @@
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             修改
           </el-button>
-          <el-button :disabled="row.username == name" v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row)">
+          <el-button v-if="row.status!='deleted'" :disabled="row.username == name" size="mini" type="danger" @click="handleDelete(row)">
             删除
           </el-button>
         </template>
@@ -70,15 +70,15 @@
     <el-dialog :title="textMap[dialogStatus]" width="400px" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 100%; margin-left:50px;">
         <el-form-item label="用户名" prop="username" style="text-align: left;">
-          <el-input :disabled="lock" style="width: 200px;" v-model="temp.username" />
+          <el-input v-model="temp.username" :disabled="lock" style="width: 200px;" />
         </el-form-item>
         <el-form-item label="密码" prop="password" style="text-align: left;">
-          <el-input style="width: 200px;" :type="pwdType" v-model="temp.password" >
-            <i style="transform: scale(1.5) translateX(-10px);" slot="suffix" class="el-icon-view" @click="showPwd()"></i>
+          <el-input v-model="temp.password" style="width: 200px;" :type="pwdType">
+            <i slot="suffix" style="transform: scale(1.5) translateX(-10px);" class="el-icon-view" @click="showPwd()" />
           </el-input>
         </el-form-item>
         <el-form-item label="手机号" prop="phone" style="text-align: left;">
-          <el-input style="width: 200px;" v-model="temp.phone" />
+          <el-input v-model="temp.phone" style="width: 200px;" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -165,13 +165,13 @@ export default {
       deleteDialogVisible: false,
       rules: {
         username: [{ required: true, message: '用户名不能为空', tigger: 'blur' },
-                    { min: 2, message: '用户名至少为2位', tigger: 'blur' },
-                    { max: 10, message: '用户名不能超过10位', tigger: 'blur'}],
+          { min: 2, message: '用户名至少为2位', tigger: 'blur' },
+          { max: 10, message: '用户名不能超过10位', tigger: 'blur' }],
         password: [{ required: true, message: '密码不能为空', tigger: 'blur' },
-                    { min: 6, message: '密码至少为6位', tigger: 'blur' },
-                    { max: 8, message: '密码不能超过8位', tigger: 'blur'}],
+          { min: 6, message: '密码至少为6位', tigger: 'blur' },
+          { max: 8, message: '密码不能超过8位', tigger: 'blur' }],
         phone: [{ required: true, message: '手机号不能为空', tigger: 'blur' },
-                { validator: validPhoneNumber, trigger: 'blur' }],
+          { validator: validPhoneNumber, trigger: 'blur' }]
       },
       // 下载进度条
       downloadLoading: false,
@@ -187,7 +187,7 @@ export default {
       fetchList(this.listQuery).then(response => {
         this.list = []
         response.data.adminList.forEach(item => {
-          let temp = {
+          const temp = {
             id: item.adminId,
             username: item.adminName,
             phone: item.adminPhone,
@@ -196,11 +196,15 @@ export default {
           this.list.push(temp)
         })
         this.total = response.data.total
+      }).catch((e) => {
+        console.log(e)
       })
     },
     getListToExport(callback) {
       fetchListToExport(this.listQuery).then(response => {
-         callback(response.data)
+        callback(response.data)
+      }).catch((e) => {
+        console.log(e)
       })
     },
     handleFilter() {
@@ -225,9 +229,9 @@ export default {
 
     // 显示明文密码
     showPwd() {
-      this.pwdType === 'password' ? this.pwdType = '' : this.pwdType = 'password';
-      let e = document.getElementsByClassName('el-icon-view')[0];
-      this.pwdType == '' ? e.setAttribute('style', 'color: #409EFF;transform: scale(1.5) translateX(-10px);') : e.setAttribute('style', 'color: #c0c4cc;transform: scale(1.5) translateX(-10px);');
+      this.pwdType === 'password' ? this.pwdType = '' : this.pwdType = 'password'
+      const e = document.getElementsByClassName('el-icon-view')[0]
+      this.pwdType == '' ? e.setAttribute('style', 'color: #409EFF;transform: scale(1.5) translateX(-10px);') : e.setAttribute('style', 'color: #c0c4cc;transform: scale(1.5) translateX(-10px);')
     },
 
     // 重置临时数据
@@ -262,6 +266,8 @@ export default {
               type: 'success',
               duration: 2000
             })
+          }).catch((e) => {
+            console.log(e)
           })
         }
       })
@@ -292,6 +298,8 @@ export default {
               type: 'success',
               duration: 2000
             })
+          }).catch((e) => {
+            console.log(e)
           })
         }
       })
@@ -303,7 +311,7 @@ export default {
     },
     // 点击确认删除后调用
     deleteData() {
-      let id = this.temp.id
+      const id = this.temp.id
       deleteAdmin({ id }).then(() => {
         const index = this.list.findIndex(v => v.id === this.temp.id)
         this.list.splice(index, 1)
@@ -314,7 +322,9 @@ export default {
           type: 'success',
           duration: 2000
         })
-      })
+      }).catch((e) => {
+            console.log(e)
+          })
     },
     // 导出表格为Excel
     handleDownload() {
@@ -328,9 +338,11 @@ export default {
           excel.export_json_to_excel({
             header: tHeader,
             data,
-            filename: 'user-list-' + parseTime(new Date(), '{y}-{m}-{d}') 
+            filename: 'user-list-' + parseTime(new Date(), '{y}-{m}-{d}')
           })
           this.downloadLoading = false
+        }).catch((e) => {
+          console.log(e)
         })
       })
     },

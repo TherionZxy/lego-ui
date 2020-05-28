@@ -9,14 +9,14 @@
         <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
       <!-- 时间选择 -->
-      <el-date-picker style="width: 15%;" v-model="listQuery.startTime" type="date" placeholder="开始日期" :picker-options="pickerOptions0"></el-date-picker>
-      <el-date-picker style="width: 15%;" v-model="listQuery.endTime" type="date" placeholder="结束日期" :picker-options="pickerOptions1"></el-date-picker>
-      <el-button style="width: 10%;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-date-picker v-model="listQuery.startTime" style="width: 15%;" type="date" placeholder="开始日期" :picker-options="pickerOptions0" />
+      <el-date-picker v-model="listQuery.endTime" style="width: 15%;" type="date" placeholder="结束日期" :picker-options="pickerOptions1" />
+      <el-button v-waves style="width: 10%;" class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
     </div>
 
-    <br />
+    <br>
 
     <div>
       <div style="text-align: center;">
@@ -29,7 +29,7 @@
       </div>
     </div>
 
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -63,18 +63,18 @@
       </el-table-column>
       <el-table-column label="订单创建时间" min-width="200px">
         <template slot-scope="{row}">
-          <span>{{ row.createTime | parseTime('{y}-{m}-{d} {h}:{i}') }}</span>
+          <span>{{ row.createTime | parseTime }}</span>
         </template>
       </el-table-column>
       <el-table-column label="订单状态" min-width="100px" align="center">
         <template slot-scope="{row}">
-          <span :style="{color: row.status==0?'red':'blue'}">{{ row.status | formatOrderStatus }}</span>
+          <span :style="{color: row.status==1?'red':'blue'}">{{ row.status | formatOrderStatus }}</span>
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" width="130" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
-          <el-button style="width: 100px;" :disabled="row.status==1?true:false" type="primary" size="mini" @click="handleUpdate(row)">
-            {{row.status==1?'订单已完成':'完成订单'}}
+          <el-button style="width: 100px;" :disabled="row.status==2?true:false" type="primary" size="mini" @click="handleUpdate(row)">
+            {{ row.status==2?'订单已完成':'完成订单' }}
           </el-button>
         </template>
       </el-table-column>
@@ -98,17 +98,17 @@
 
 <script>
 // 导入所需的api
-import { fetchList, updateOrder} from '@/api/order'
-import waves from '@/directive/waves' // waves directive
+import { fetchList, orderComplete } from '@/api/order-api'
+import waves from '@/directive/waves'
 import { parseTime, formatOrderStatus } from '@/utils/index'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import Pagination from '@/components/Pagination'
 
 export default {
   name: 'OrderTable',
   components: { Pagination },
   directives: { waves },
   filters: {
-    parseTime,formatOrderStatus
+    parseTime, formatOrderStatus
   },
   data() {
     return {
@@ -126,12 +126,13 @@ export default {
         name: '',
         phone: '',
         code: '',
-        status: 'all',
-        startTime: '',
-        endTime: ''
+        status: -1,
+        // 初始化开始时间为昨天0点到今天零点
+        startTime: parseTime(new Date().getTime() - 24*60*60*1000, '{y}-{m}-{d}'),
+        endTime: parseTime(new Date().getTime(), '{y}-{m}-{d}')
       },
       // 排序选项
-      statusOptions: [{label:'all', key: 'all'},{ label: '待提货', key: '0' }, { label: '已提货', key: '1' }],
+      statusOptions: [{ label: 'all', key: -1 }, { label: '待提货', key: 1 }, { label: '已提货', key: 2 }],
       // 下载进度条
       downloadLoading: false,
 
@@ -140,16 +141,16 @@ export default {
 
       pickerOptions0: {
         disabledDate: (time) => {
-          if (this.listQuery.endTime != "") {
+          if (this.listQuery.endTime != '') {
             return time.getTime() > Date.now() || time.getTime() > this.listQuery.endTime
           } else {
-            return time.getTime() > Date.now();
+            return time.getTime() > Date.now()
           }
         }
       },
       pickerOptions1: {
         disabledDate: (time) => {
-          return time.getTime() < this.listQuery.startTime || time.getTime() > Date.now();
+          return time.getTime() < this.listQuery.startTime || time.getTime() > Date.now()
         }
       },
 
@@ -166,7 +167,20 @@ export default {
   methods: {
     getList() {
       fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
+        this.list = []
+        response.data.orderList.forEach(item => {
+          console.log(item)
+          let temp = {
+            id: item.orderId,
+            name: item.name,
+            phone: item.phone,
+            code: item.code,
+            status: item.status,
+            content: item.content,
+            createTime: item.time,
+          }
+          this.list.push(temp)
+        })
         this.total = response.data.total
       })
     },
@@ -179,8 +193,8 @@ export default {
     downloadByCondition() {
       this.downloadLoading = true
       import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['客户名', '手机号', '订单内容', '提货码' , '订单状态' , '订单创建时间']
-        const filterVal = ['name', 'phone', 'content', 'code' , 'status' , 'createTime']
+        const tHeader = ['客户名', '手机号', '订单内容', '提货码', '订单状态', '订单创建时间']
+        const filterVal = ['name', 'phone', 'content', 'code', 'status', 'createTime']
         const data = this.formatJson(filterVal)
         excel.export_json_to_excel({
           header: tHeader,
@@ -188,6 +202,8 @@ export default {
           filename: 'order-list-' + new Date().toLocaleDateString()
         })
         this.downloadLoading = false
+      }).catch(e=>{
+        console.log(e)
       })
     },
 
@@ -211,18 +227,18 @@ export default {
 
     // 点击确认
     updateStatus() {
-      const tempData = Object.assign({}, this.temp)
-      updateOrder(tempData).then(() => {
+      // const tempData = Object.assign({}, this.temp)
+      const id = this.temp.id
+      orderComplete({ id }).then(() => {
         const index = this.list.findIndex(v => v.id === this.temp.id)
-        this.list[index].status = 1
+        this.list[index].status = 2
         this.updateDialogVisible = false
         this.$notify({
           title: '成功',
-          message: '修改用户成功',
+          message: '订单状态变更成功',
           type: 'success',
           duration: 2000
         })
-        // this.getList()
       })
     },
 

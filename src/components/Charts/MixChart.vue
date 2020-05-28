@@ -5,6 +5,8 @@
 <script>
 import echarts from 'echarts'
 import resize from './mixins/resize'
+import { orderNums } from '@/api/order-api'
+import { parseTime } from '@/utils'
 
 export default {
   mixins: [resize],
@@ -48,15 +50,20 @@ export default {
   methods: {
     // 表格数据获取
     initData() {
-      this.tableData = [1,2,3,4,5,6,7,8,9,10,11,12]
+      orderNums().then(res => {
+        res.data.forEach(item => {
+          this.tableData.unshift(item.number)
+        })
+        this.initChart(res.data.length)
+      })
     },
-    initChart() {
+    initChart(length) {
       this.chart = echarts.init(document.getElementById(this.id))
       const xData = (function() {
         const data = []
         // 获取从今天开始往前推 12 天的日期
         const today = new Date()
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < length; i++) {
           data.push(new Date(today.setDate(today.getDate() - 1)).toLocaleDateString())
         }
         return data.reverse()

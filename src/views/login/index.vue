@@ -110,10 +110,10 @@ export default {
         if (valid) {
           this.loading = true
           this.$store.dispatch('user/login', this.loginForm).then(() => {
-            if (this.redirect.split('/')[1] == 'useradmin') {
-              this.redirect = '/'
-            }
-            this.$router.push({ path: this.redirect || '/' })
+            // if (this.redirect != undefined && this.redirect.split('/')[1] == 'useradmin') {
+            //   this.redirect = '/'
+            // }
+            this.$router.push({ path: '/' })
             this.loading = false
           }).catch((e) => {
             console.log(e)

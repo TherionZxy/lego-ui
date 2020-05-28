@@ -6,28 +6,15 @@
       <el-select v-model="listQuery.status" style="width: 15%;" class="filter-item" @change="handleFilter">
         <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button style="width: 10%;margin-left: 10px; " v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button v-waves style="width: 10%;margin-left: 10px; " class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
-      <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
-        新增抢购水果
+      <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
+        按条件导出
       </el-button>
     </div>
 
-    <br />
-
-    <div>
-      <div style="text-align: center;">
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
-          按条件导出
-        </el-button>
-        <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadToday">
-          导出当天数据
-        </el-button>
-      </div>
-    </div>
-
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -74,13 +61,16 @@
           <span>{{ row.status==1?'已开始':'未开始' }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" min-width="15%" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" min-width="20%" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             修改
           </el-button>
-          <el-button :disabled="row.status==0?true:false" type="danger" size="mini" @click="handleDelete(row)">
+          <el-button :disabled="row.status==0?true:false" type="warning" size="mini" @click="handleDelete(row)">
             停止
+          </el-button>
+          <el-button type="danger" size="mini" @click="handleRemove(row)">
+            移除
           </el-button>
         </template>
       </el-table-column>
@@ -92,21 +82,34 @@
     <el-dialog :title="'修改抢购信息'" width="400px" :visible.sync="updateDialogVisible">
       <el-form ref="dataForm" :model="temp" :rules="rules" size="medium" label-width="100px">
         <el-form-item label="惊爆价" prop="discount">
-          <el-input-number v-model="temp.discount" :max="temp.price" placeholder="惊爆价" :precision='2'></el-input-number>
+          <el-input-number v-model="temp.discount" :max="temp.price" placeholder="惊爆价" :precision="2" />
         </el-form-item>
         <el-form-item label="限购数量" prop="maxnum">
-          <el-input-number v-model="temp.maxnum" placeholder="限购数量"></el-input-number>
+          <el-input-number v-model="temp.maxnum" placeholder="限购数量" />
         </el-form-item>
         <el-form-item label="活动日期" prop="date">
-          <el-date-picker v-model="temp.date" format="yyyy-MM-dd" value-format="yyyy-MM-dd"
-            :style="{width: '100%'}" placeholder="请选择活动日期" clearable :picker-options="pickerOptions">
-          </el-date-picker>
+          <el-date-picker
+            v-model="temp.date"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
+            :style="{width: '100%'}"
+            placeholder="请选择活动日期"
+            clearable
+            :picker-options="pickerOptions"
+          />
         </el-form-item>
         <el-form-item label="时间范围" prop="time">
-          <el-time-picker v-model="temp.time" is-range format="HH:mm" value-format="HH:mm"
-            :style="{width: '100%'}" start-placeholder="开始时间" end-placeholder="结束时间" range-separator="至"
-            clearable>
-          </el-time-picker>
+          <el-time-picker
+            v-model="temp.time"
+            is-range
+            format="HH:mm"
+            value-format="HH:mm"
+            :style="{width: '100%'}"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            range-separator="至"
+            clearable
+          />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -131,12 +134,25 @@
         </el-button>
       </div>
     </el-dialog>
+
+    <!-- 移除对话框 -->
+    <el-dialog :title="'将水果从限时抢购移除'" width="20%" :visible.sync="removeDialogVisible">
+      <span style="font-size: 16px;">确认将水果 "{{ temp.fruitname }} 从限时抢购列表移除" ?</span>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="removeDialogVisible = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="removeData()">
+          确认
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 // 导入所需的api
-import { fetchList, fetchListToExport, updateFlashSale, stopFlashSale } from '@/api/flashsale-api'
+import { fetchList, fetchListToExport, updateFlashSale, stopFlashSale, removeFlashSale } from '@/api/flashsale-api'
 import waves from '@/directive/waves'
 import Pagination from '@/components/Pagination'
 import { parseTime } from '@/utils/index'
@@ -173,7 +189,7 @@ export default {
         discount: 0.0,
         maxnum: 1,
         date: '',
-        time: '',
+        time: ''
       },
       rules: {
         discount: [{
@@ -195,18 +211,20 @@ export default {
           required: true,
           message: '时间范围不能为空',
           trigger: 'change'
-        }],
+        }]
       },
 
       deleteDialogVisible: false,
 
       pickerOptions: {
         disabledDate(time) {
-           return time.getTime() < Date.now() - 8.64e7;
-        },
+          return time.getTime() < Date.now() - 8.64e7
+        }
       },
 
-      statusOptions: [{label:'all', key: -1},{ label: '未开始', key: 0 }, { label: '已开始', key: 1 }],
+      removeDialogVisible: false,
+
+      statusOptions: [{ label: 'all', key: -1 }, { label: '未开始', key: 0 }, { label: '已开始', key: 1 }]
     }
   },
   created() {
@@ -217,7 +235,7 @@ export default {
       fetchList(this.listQuery).then(response => {
         this.list = []
         response.data.fruitList.forEach(item => {
-          let temp = {
+          const temp = {
             id: item.fruitId,
             fruitname: item.fruitName,
             price: item.normPrice,
@@ -225,11 +243,13 @@ export default {
             maxnum: item.maxNum,
             startTime: item.startTime,
             endTime: item.endTime,
-            status: (new Date(item.startTime) < new Date() && new Date() < new Date(item.endTime))?1:0
+            status: (new Date(item.startTime) < new Date() && new Date() < new Date(item.endTime)) ? 1 : 0
           }
           this.list.push(temp)
         })
         this.total = response.data.total
+      }).catch((e) => {
+        console.log(e)
       })
     },
     handleFilter() {
@@ -238,7 +258,7 @@ export default {
     },
 
     getStatus(startTime, endTime) {
-      console.log( )
+      console.log()
     },
 
     // 按条件导出数据
@@ -254,6 +274,8 @@ export default {
           filename: 'flashsale-list-' + new Date().toLocaleDateString()
         })
         this.downloadLoading = false
+      }).catch((e) => {
+        console.log(e)
       })
     },
 
@@ -269,35 +291,63 @@ export default {
       }))
     },
 
-    handleCreate() {
+    handleRemove(row) {
+      if(row.status == 1) {
+        this.$notify({
+          title: '错误',
+          message: '请先停止该限时抢购水果',
+          type: 'warning',
+          duration: 2000
+        })
+        return
+      }
+      this.temp = Object.assign({}, row)
+      this.removeDialogVisible = true
+    },
 
+    removeData() {
+      const id = this.temp.id
+      removeFlashSale({ id }).then(() => {
+        console.log(1)
+        const index = this.list.findIndex(v => v.id === this.temp.id)
+        this.list.splice(index, 1)
+        this.removeDialogVisible = false
+        this.$notify({
+          title: '成功',
+          message: '移除水果成功',
+          type: 'success',
+          duration: 2000
+        })
+      }).catch(e=>{
+        console.log(e)
+      })
     },
 
     handleUpdate(row) {
       this.temp = Object.assign({}, row)
       // 这里不能直接赋值，要使用$set
       console.log(this.temp)
-      this.$set(this.temp, "date", parseTime(this.temp.startTime, '{y}-{m}-{d}'))
-      this.$set(this.temp, "time", [parseTime(this.temp.startTime, '{h}:{i}'),parseTime(this.temp.endTime, '{h}:{i}')])
+      this.$set(this.temp, 'date', parseTime(this.temp.startTime, '{y}-{m}-{d}'))
+      this.$set(this.temp, 'time', [parseTime(this.temp.startTime, '{h}:{i}'), parseTime(this.temp.endTime, '{h}:{i}')])
       this.updateDialogVisible = true
     },
 
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
-        if(valid) {
+        if (valid) {
           this.temp.startTime = this.temp.date + ' ' + this.temp.time[0]
           this.temp.endTime = this.temp.date + ' ' + this.temp.time[1]
 
-          updateFlashSale(this.temp).then(()=>{
+          updateFlashSale(this.temp).then(() => {
             const index = this.list.findIndex(v => v.id === this.temp.id)
             this.list.splice(index, 1, this.temp)
-            
-            if(new Date(this.temp.startTime) <= new Date() && new Date() <= new Date(this.temp.endTime)) {
+
+            if (new Date(this.temp.startTime) <= new Date() && new Date() <= new Date(this.temp.endTime)) {
               this.list[index].status = 1
             } else {
               this.list[index].status = 0
             }
-            
+
             this.updateDialogVisible = false
             this.$notify({
               title: '成功',
@@ -305,6 +355,8 @@ export default {
               type: 'success',
               duration: 2000
             })
+          }).catch((e) => {
+            console.log(e)
           })
         }
       })
@@ -316,7 +368,7 @@ export default {
     },
 
     deleteData() {
-      let id = this.temp.id
+      const id = this.temp.id
       stopFlashSale({ id }).then(() => {
         const index = this.list.findIndex(v => v.id === this.temp.id)
         this.list[index].status = 0
@@ -329,6 +381,8 @@ export default {
           duration: 2000
         })
         this.deleteDialogVisible = false
+      }).catch((e) => {
+        console.log(e)
       })
     }
   }

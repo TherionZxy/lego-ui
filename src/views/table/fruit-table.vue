@@ -6,7 +6,7 @@
       <el-select v-model="listQuery.status" style="width: 15%;" class="filter-item" @change="handleFilter">
         <el-option v-for="item in statusOptions" :key="item.key" :label="item.label" :value="item.key" />
       </el-select>
-      <el-button style="width: 10%;margin-left: 10px;" v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
+      <el-button v-waves style="width: 10%;margin-left: 10px;" class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
       <el-button v-waves :loading="downloadLoading" class="filter-item" type="normal" icon="el-icon-download" @click="downloadByCondition">
@@ -17,7 +17,7 @@
       </el-button>
     </div>
 
-    <br />
+    <br>
 
     <!-- 数据列表模块 -->
     <el-table
@@ -39,9 +39,9 @@
           <span>{{ row.price }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="描述" min-width="20%" align="left">
+      <el-table-column  label="描述" min-width="20%" align="left">
         <template slot-scope="{row}">
-          <span>{{ row.detail }}</span>
+          <span>{{ row.detail|subString }}</span>
         </template>
       </el-table-column>
       <el-table-column label="图片" min-width="20%" align="left">
@@ -49,16 +49,16 @@
           <span>{{ row.picture }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" min-width="20%" class-name="small-padding fixed-width">
+      <el-table-column label="操作" align="center" min-width="22%" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
-          <el-button :type="row.status == 0? 'success': 'warning'" size="mini" @click="handleUpOrDownFruit(row)">
-            {{row.status == 0? '上架': '下架'}}
+          <el-button :type="row.status == 0? 'success': 'danger'" size="mini" @click="handleUpOrDownFruit(row)">
+            {{ row.status == 0? '上架': '下架' }}
           </el-button>
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             修改
           </el-button>
-          <el-button type="danger" size="mini" @click="handleDelete(row)">
-            删除
+          <el-button :disabled="row.isflashsale==1?true:false" type="warning" size="mini" @click="handleFlashSale(row)">
+            添加至抢购
           </el-button>
         </template>
       </el-table-column>
@@ -67,13 +67,13 @@
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
 
     <!-- 删除对话框 -->
-    <el-dialog :title="'删除商品'" width="20%" :visible.sync="deleteDialogVisible">
-      <span style="font-size: 16px;">确认删除水果 "{{ temp.fruitname }}" ?</span>
+    <el-dialog :title="'添加到限时抢购'" width="350px" :visible.sync="changeDialogVisible">
+      <span style="font-size: 16px;">确认将水果 "{{ temp.fruitname }}" 添加到限时抢购?</span>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="deleteDialogVisible = false">
+        <el-button @click="changeDialogVisible = false">
           取消
         </el-button>
-        <el-button type="primary" @click="deleteData()">
+        <el-button type="primary" @click="changeData()">
           确认
         </el-button>
       </div>
@@ -97,16 +97,17 @@
 
 <script>
 // 导入所需的api
-import { fetchList, fetchListToExport, changeFruitStatus, deleteFruit } from '@/api/fruit-api'
+import { fetchList, fetchListToExport, changeFruitStatus, changeIsFlashSaleStatus } from '@/api/fruit-api'
 import waves from '@/directive/waves' // waves directive
 import Pagination from '@/components/Pagination' // secondary package based on el-pagination
-import { formatFruitStatus } from '@/utils/index'
+import { formatFruitStatus, subString } from '@/utils/index'
 
 export default {
   name: 'TotalOrderTable',
   components: { Pagination },
   directives: { waves },
   filters: {
+    subString
   },
   data() {
     return {
@@ -127,7 +128,7 @@ export default {
       // 下载进度条
       downloadLoading: false,
 
-      deleteDialogVisible: false,
+      changeDialogVisible: false,
 
       temp: {
         id: undefined,
@@ -140,7 +141,7 @@ export default {
 
       alterDialogVisible: false,
 
-      statusOptions: [{label:'all', key: -1},{ label: '未上架', key: 0}, { label: '已上架', key: 1}],
+      statusOptions: [{ label: 'all', key: -1 }, { label: '未上架', key: 0 }, { label: '已上架', key: 1 }]
     }
   },
   created() {
@@ -151,25 +152,32 @@ export default {
       fetchList(this.listQuery).then(response => {
         this.list = []
         response.data.fruitList.forEach(item => {
-          let temp = {
+          const temp = {
             id: item.fruitId,
             price: item.normPrice,
             fruitname: item.fruitName,
             detail: item.fruitIntro,
             password: item.adminPwd,
             status: item.isSale,
-            picture: item.fruitPic
+            isflashsale: item.isFlashSale,
+            picture: item.display + '张展示图片' + item.intro + '张详情图片',
+            display: item.display,
+            intro: item.intro
           }
           this.list.push(temp)
         })
 
         this.total = response.data.total
+      }).catch((e) => {
+        console.log(e)
       })
     },
 
     getListToExport(callback) {
       fetchListToExport(this.listQuery).then(response => {
         callback(response.data)
+      }).catch((e) => {
+        console.log(e)
       })
     },
 
@@ -192,6 +200,8 @@ export default {
             filename: 'fruit-list-' + new Date().toLocaleDateString()
           })
           this.downloadLoading = false
+        }).catch((e) => {
+          console.log(e)
         })
       })
     },
@@ -199,7 +209,7 @@ export default {
     // 针对不同的属性进行属性值过滤
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {
-        if(j == 'status'){
+        if (j == 'status') {
           return formatFruitStatus(v[j])
         } else {
           return v[j]
@@ -209,40 +219,44 @@ export default {
 
     formatJsonToExport(filterVal, data) {
       return data.map(v => filterVal.map(j => {
-        if(j == 'isSale'){
+        if (j == 'isSale') {
           return formatFruitStatus(v[j])
+        } else if (j == 'fruitPic') {
+          return v[j].display + '张展示图片 ' +v[j].intro + '张详情图片'
         } else {
           return v[j]
         }
       }))
     },
 
-    handleDelete(row) {
-      this.deleteDialogVisible = true
+    handleFlashSale(row) {
+      this.changeDialogVisible = true
       this.temp = Object.assign({}, row)
     },
 
-    deleteData() {
-      let id = this.temp.id
-      deleteFruit({ id }).then(() => {
+    changeData() {
+      const id = this.temp.id
+      changeIsFlashSaleStatus({ id }).then(() => {
         const index = this.list.findIndex(v => v.id === this.temp.id)
-        this.list.splice(index, 1)
+        this.list[index].isflashsale=1
         this.$notify({
           title: '成功',
-          message: '删除商品成功',
+          message: '添加限时抢购商品成功',
           type: 'success',
           duration: 2000
         })
-        this.deleteDialogVisible = false
+        this.changeDialogVisible = false
+      }).catch((e) => {
+        console.log(e)
       })
     },
 
     handleCreate() {
-      this.$router.push({path: '/grounding/modify'})
+      this.$router.push({ path: '/grounding/modify' })
     },
 
     handleUpdate(row) {
-      this.$router.push({path: '/grounding/modify', query: row})
+      this.$router.push({ path: '/grounding/modify', query: row })
     },
 
     // 处理 上架/下架
@@ -253,19 +267,21 @@ export default {
 
     alterData() {
       const tempData = {}
-      const newStatus = this.temp.status == 0?1:0
+      const newStatus = this.temp.status == 0 ? 1 : 0
       tempData.fruitId = this.temp.id
       tempData.isSale = newStatus
-      changeFruitStatus(tempData).then(()=>{
+      changeFruitStatus(tempData).then(() => {
         const index = this.list.findIndex(v => v.id === this.temp.id)
         this.list[index].status = newStatus
         this.alterDialogVisible = false
         this.$notify({
           title: '成功',
-          message: this.temp.status==0?'上架成功':'下架成功',
+          message: this.temp.status == 0 ? '上架成功' : '下架成功',
           type: 'success',
           duration: 2000
         })
+      }).catch((e) => {
+        console.log(e)
       })
     }
   }
